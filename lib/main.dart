@@ -34,147 +34,48 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Home extends StatefulWidget {
-  Home({Key? key}) : super(key: key);
-
-  @override
-  _HomeState createState() => _HomeState();
-}
-
-class _HomeState extends State<Home> {
-  final _weatherRepository = WeatherRepository();
-
-  Weather? _weather = Weather.empty();
-
-  final _key = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-  }
+class Home extends StatelessWidget {
+  const Home({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        body: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _weather != null
-                ? _buildWeatherView(context, _weather!)
-                : Container(
-                    height: MediaQuery.of(context).size.height / 2,
-                    width: MediaQuery.of(context).size.width,
-                  ),
-            Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height / 2,
-              child: SizedBox(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        margin: EdgeInsets.fromLTRB(50, 0, 0, 0),
-                        child: Form(
-                          key: _key,
-                          child: TextFormField(
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return "Enter a City!";
-                              }
-                              return null;
-                            },
-                            onSaved: (value) async {
-                              final _data = await _weatherRepository
-                                  .fetchWeather(value as String);
-                              setState(() {
-                                this._weather = _data;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              labelText: "Enter City",
-                              labelStyle: TextStyle(
-                                color: Colors.white,
-                              ),
-                              fillColor: Colors.white,
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(25.0),
-                                ),
-                                borderSide: BorderSide(
-                                  color: Colors.white,
-                                ),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(25.0),
-                                ),
-                                borderSide: BorderSide(
-                                  color: Colors.red,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(
-                                    25.0,
-                                  ),
-                                ),
-                                borderSide: BorderSide(
-                                  color: Colors.white,
-                                ),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.red),
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(
-                                    25.0,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            cursorColor: Colors.white,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ),
-                      ),
-                      flex: 5,
-                    ),
-                    Expanded(
-                      child: Container(
-                        margin: EdgeInsets.fromLTRB(10, 10, 50, 0),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (_key.currentState!.validate()) {
-                              _key.currentState!.save();
-                            }
-                          },
-                          child: Icon(
-                            Icons.search,
-                            size: 32,
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            shadowColor: Colors.transparent,
-                            primary: Colors.transparent,
-                            elevation: 0.0,
-                            onSurface: Colors.transparent,
-                            splashFactory: NoSplash.splashFactory,
-                            
-                          ),
-                        ),
-                      ),
-                      flex: 2,
-                    ),
-                  ],
-                ),
-                height: MediaQuery.of(context).size.height / 2,
-              ),
-            ),
-          ],
+        body: BlocConsumer<WeatherBloc, WeatherState>(
+          listener: (context, state) {
+            print("listener - $state");
+          },
+          builder: (context, state) {
+            print("builder - $state");
+            if (state is WeatherInitial) {
+              return Column(
+                children: [
+                  _weatherView(context, Weather.empty(), empty: true),
+                  _searchBar(context),
+                ],
+              );
+            }
+
+            if (state is FetchedWeather) {
+              return Column(
+                children: [
+                  _weatherView(context, state.weather),
+                  _searchBar(context),
+                ],
+              );
+            }
+
+            if (state is WeatherLoading) {
+              return Column(
+                children: [
+                  _loading(context),
+                  _searchBar(context),
+                ],
+              );
+            }
+
+            return Container();
+          },
         ),
         backgroundColor: Colors.grey[850],
       ),
@@ -182,38 +83,170 @@ class _HomeState extends State<Home> {
   }
 }
 
-Widget _buildWeatherView(BuildContext context, Weather _weather) {
+Widget _loading(BuildContext context) {
   return Container(
     height: MediaQuery.of(context).size.height / 2,
-    child: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _weather.isDay
-              ? Image.asset(
-                  "assets/images/sunrise.png",
-                  height: 275,
-                  width: 275,
-                  color: Colors.white,
-                )
-              : Image.asset(
-                  "assets/images/night_sky.png",
-                  height: 275,
-                  width: 275,
-                  color: Colors.white,
-                ),
-          Divider(
-            height: 10,
-            color: Colors.transparent,
-          ),
-          Center(
-            child: Text(
-              "${_weather.city} - ${_weather.temp} ${String.fromCharCode($deg)}C",
-              style: TextStyle(color: Colors.white, fontSize: 20),
-            ),
-          ),
-        ],
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircularProgressIndicator(
+          color: Colors.white,
+        ),
+        Divider(
+          height: 15.0,
+          color: Colors.transparent,
+        ),
+        Text(
+          "Loading ...",
+          style: TextStyle(color: Colors.white),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _searchBar(BuildContext context) {
+  final _tffBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(
+      Radius.circular(
+        25.0,
       ),
     ),
+    borderSide: BorderSide(color: Colors.white),
+  );
+  final _tffErrorBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(
+      Radius.circular(
+        25.0,
+      ),
+    ),
+    borderSide: BorderSide(
+      color: Colors.red,
+    ),
+  );
+
+  final _key = GlobalKey<FormState>();
+
+  return Container(
+    height: MediaQuery.of(context).size.height / 2,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.fromLTRB(50, 0, 25, 0),
+            child: Form(
+              key: _key,
+              child: TextFormField(
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return "Enter a City!";
+                  }
+                  return null;
+                },
+                decoration: InputDecoration(
+                  labelText: "Enter City",
+                  labelStyle: TextStyle(
+                    color: Colors.white,
+                  ),
+                  enabledBorder: _tffBorder,
+                  focusedBorder: _tffBorder,
+                  errorBorder: _tffErrorBorder,
+                  focusedErrorBorder: _tffErrorBorder,
+                  isDense: true,
+                ),
+                style: TextStyle(color: Colors.white),
+                cursorColor: Colors.white,
+                onSaved: (value) => BlocProvider.of<WeatherBloc>(context)
+                    .add(FetchWeather(value as String)),
+              ),
+            ),
+          ),
+          flex: 6,
+        ),
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.fromLTRB(0, 0, 25, 0),
+            child: ElevatedButton(
+              child: Icon(Icons.search),
+              onPressed: () {
+                if (_key.currentState!.validate()) _key.currentState!.save();
+              },
+              style: ElevatedButton.styleFrom(
+                shadowColor: Colors.transparent,
+                primary: Colors.transparent,
+                elevation: 0.0,
+                onSurface: Colors.transparent,
+                splashFactory: NoSplash.splashFactory,
+              ),
+            ),
+          ),
+          flex: 1,
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _weatherView(BuildContext context, Weather weather,
+    {bool empty = false}) {
+  return Container(
+    height: MediaQuery.of(context).size.height / 2,
+    child: empty
+        ? Column()
+        : Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              weather.isDay
+                  ? Image.asset(
+                      "assets/images/sunrise.png",
+                      height: 280,
+                      width: 280,
+                      color: Colors.white,
+                    )
+                  : Image.asset(
+                      "assets/images/night_sky.png",
+                      height: 280,
+                      width: 280,
+                      color: Colors.white,
+                    ),
+              Divider(
+                height: 10.0,
+                color: Colors.transparent,
+              ),
+              Text(
+                "${weather.city} - ${weather.temp} ${String.fromCharCode($deg)}C",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24.0,
+                ),
+              ),
+              Divider(
+                height: 15.0,
+                color: Colors.transparent,
+              ),
+              GestureDetector(
+                child: Text(
+                  "more info",
+                  style: TextStyle(
+                    fontSize: 16.0,
+                    color: Colors.lightBlue[400],
+                  ),
+                ),
+                onTap: () => showDialog(
+                  context: context,
+                  builder: (context) => _moreDialog(context, weather),
+                ),
+              ),
+            ],
+          ),
+  );
+}
+
+Widget _moreDialog(BuildContext context, Weather weather) {
+  return AlertDialog(
+    title: Text("${weather.city}", style: TextStyle(color: Theme.of(context).primaryColor),),
+    elevation: 0.0 ,
+    backgroundColor: Colors.black,
   );
 }
