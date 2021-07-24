@@ -22,6 +22,6 @@ class WeatherRepository implements IWeatherRepository {
       }
     } on Exception {}
 
-    return Weather("", "", false);
+    return Weather.empty();
   }
 }
